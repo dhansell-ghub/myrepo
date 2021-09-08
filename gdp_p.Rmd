@@ -1,0 +1,380 @@
+---
+title: "Introduction to the Australian System of National Accounts"
+subtitle: "Module 3: Gross Domestic Product (Production)"
+author: "David Hansell"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+
+## Here's the R Code to enable the latter slides. It just loads libraries, data etc that are used subsequently.
+knitr::opts_chunk$set(echo = FALSE)
+library(data.table)
+library(tidytable)
+library(kableExtra)
+library(readabs)
+library(tidytable)
+library(ggplot2)
+library(tidyverse)
+library(scales, lubridate)
+library(data.table)
+library(plotly)
+# define function to read ABS data with the read_abs package. 
+
+
+grab <- function(series) {
+  read_abs(series_id = series) %>% 
+    select.(value, date)   
+}
+# Grab relevant series from ABS website via read_abs
+a <- grab("A3347242V") %>%  rename.(Agriculture = value)
+b <- grab("A3347281K") %>%  rename.(Mining = value)
+c <- grab("A3347318C") %>%  rename.(Manufacturing = value)
+d <- grab("A3348082L") %>%  rename.(EGWW = value)
+e <- grab("A3348119F") %>%  rename.(Construction = value)
+f <- grab("A3348153K") %>%  rename.(Wholesale = value)
+g <- grab("A3348187J") %>%  rename.(Retail = value)
+h <- grab("A3348221A") %>%  rename.(Accom_Food_Cafes = value)
+i <- grab("A3348255X") %>%  rename.(Transport = value)
+j <- grab("A3348294R") %>%  rename.(Info_MT = value)
+k <- grab("A3348328A") %>%  rename.(Finance = value)
+l <- grab("A3348362F") %>%  rename.(Rental = value)
+m <- grab("A3348396C") %>%  rename.(PST = value)
+n <- grab("A3348430W") %>%  rename.(Admin_SS = value)
+o <- grab("A3346692K") %>%  rename.(Public_Admin = value)
+p <- grab("A3346726W") %>%  rename.(Education = value)
+q <- grab("A3346760A") %>%  rename.(Health = value)
+r <- grab("A3346796C") %>%  rename.(Arts_Rec = value)
+s <- grab("A3346831X") %>%  rename.(Other_Services = value)
+t <- grab("A2520658X") %>%  rename.(Dwellings = value)
+
+
+##############################################################################################################
+# Merge all industries together and value-added at basic prices
+##############################################################################################################
+
+vabp <- grab("A2420955W") %>%  rename.(vabp = value) %>% 
+  left_join.(a) %>% left_join.(b) %>% left_join.(c) %>% 
+  left_join.(d) %>% left_join.(e) %>% left_join.(f) %>% 
+  left_join.(g) %>% left_join.(h) %>% left_join.(i) %>% 
+  left_join.(j) %>% left_join.(k) %>% left_join.(l) %>% 
+  left_join.(m) %>% left_join.(n) %>% left_join.(o) %>% 
+  left_join.(p) %>% left_join.(q) %>% left_join.(r) %>% 
+  left_join.(s) %>% left_join.(t) %>% 
+  filter.(!is.na(vabp)) 
+
+vasum <- vabp %>% select.(-vabp) %>% 
+  pivot_longer.(cols = c(-date)) %>% 
+  summarise.(vasum = sum(value), 
+             .by = c(date)) 
+##############################################################################################################
+# Sum industries by primary, secondary, tertiary and dwellings
+##############################################################################################################
+sector1 <- vabp %>% 
+  select.(-vabp) %>% 
+  pivot_longer.(cols = c(-date)) %>% 
+  mutate.(sector = case_when(name == "Agriculture" ~ "Primary", 
+                             name == "Mining" ~ "Primary", 
+                             name == "Manufacturing" ~ "Secondary", 
+                             name == "EGWW" ~ "Tertiary", 
+                             name == "Construction" ~ "Tertiary", 
+                             name == "Wholesale" ~ "Tertiary", 
+                             name == "Retail" ~ "Tertiary",
+                             name == "Accom_Food_Cafes" ~ "Tertiary", 
+                             name == "Transport" ~ "Tertiary", 
+                             name == "Info_MT" ~ "Tertiary", 
+                             name == "Finance" ~ "Tertiary", 
+                             name == "Rental" ~ "Tertiary", 
+                             name == "PST" ~ "Tertiary", 
+                             name == "Admin_SS" ~ "Tertiary", 
+                             name == "Public_Admin" ~ "Non-Market", 
+                             name == "Education" ~ "Non-Market", 
+                             name == "Health" ~ "Non-Market", 
+                             name == "Arts_Rec" ~ "Tertiary", 
+                             name == "Other_Services" ~ "Tertiary", 
+                             name == "Dwellings" ~ "Dwellings")) %>% 
+  summarise.(va = sum(value), 
+             .by = c(date, sector)) 
+
+arts <- grab("A3347489W") %>% rename.(artscp = value) %>% 
+  inner_join.(r) %>% 
+  filter.(!is.na(artscp)) %>% 
+  rename.(`Current Prices` = artscp, 
+          `Chain Volume` = Arts_Rec) %>% 
+  pivot_longer.(cols=c(-date))
+
+ming <- grab("A3348041T") %>% rename.(Mining_CP = value) %>% 
+  inner_join.(b) %>% 
+  filter.(!is.na(Mining_CP)) %>% 
+  rename.(`Current Prices` = Mining_CP, 
+          `Chain Volume` = Mining) %>% 
+  pivot_longer.(cols = c(-date)) 
+
+```
+
+
+
+## Aims of the Module
+
+1. Understand the production approach to GDP measurement
+2. How to map these concepts to ABS data
+
+Note: There is a corresponding module that demonstrates how to download ABS data directly in R-Studio and make the charts presented here.
+
+## Overview
+
+- GDP = Gross Domestic Product
+  + **Gross** = includes depreciation of capital
+  + **Domestic** = confined to a production boundary
+  + **Product** = what is produced
+- System of National Accounts (SNA) defines GDP three ways
+  + **Expenditure**: Consumption + Investment + Govt Purchases + Exports – Imports 
+  + **Income**: Compensation of Employees (CoE) + Gross Operating Surplus (GOS)
+  + **Production**: Output less intermediate Expenses (value-added). 
+- In other words, we spend our income on what we produce.
+
+## Overview
+
+This module focusses on the production approach or GDP(P). 
+
+We divide the module into two parts:  
+
+1. Concepts  
+2. Measurement.
+  
+# Concepts
+
+## GDP (P) - Concepts
+
+Production approach to GDP is based on the framework:  
+$$
+\begin{aligned}
+GDP = \text{Gross Output} \\ 
+– \text{Intermediate Use}  \\
++ \text{ Taxes} \\
+- \text{Subsidies on Product}
+\end{aligned}
+$$
+This is often referred to as the sum of value-added because gross output less intermediate use is equal to value-added.
+
+## GDP (P) - Concepts
+
+- **Gross Output** is (mostly) total sales of goods and services by economic units.  
+- **Intermediate use** includes the goods and services used up in producing gross output.  
+- Since almost all goods and services require inputs if we just include the revenue derived by a business we are double counting the output that business produces and the value of goods or services sold by another.  
+  - For example, a loaf of bread includes the cost of flour so we subtract the cost of flour and other goods/services to get the value-added produced by the loaf of bread.
+
+## GDP (P) - Concepts
+
+- **Who or what produces value-added?**
+  - **Technical answer:** Type of Activity Units or TAUs. 
+  - **Practical answer:** Most business activities are specific to one industry and recorded under one ABN. However large complex businesses, such as those on the ASX, have hundreds of ABNs and operate across different industries. 
+      - **Example:** A large wine producer grows grapes (Agriculture), makes wine (Manufacturing), sells to Dan Murphy’s (Wholesale Trade), has a cellar door (Retail Trade), and a head office (Professional, Scientific and Technical Services).
+      
+# Measurement
+
+## GDP (P) - Measurement
+
+- **How does the ABS define a business?**
+- ABS maintains a register of businesses and separates TAUs into two groups: 
+  - *Profiled population*: ABS works with large complex businesses to separate their activities into TAUs. 
+  - *Non-Profiled Population*: 95% or more TAUs are equivalent to an ABN, and ABS gets these data from the Australian Business Register.
+  
+## GDP (P) - Measurement
+
+- **How do we define industries?**
+- Australia and New Zealand maintain a set of industry definitions – currently ANZSIC06 - because we want more detail on activities we specialise in. 
+- Each industry or division or sector is split into smaller groupings. 
+  - One-digit: Division
+  - Two-digit: Subdivision
+  - Three-digit: Group
+  - Four-digit: Class
+
+## GDP (P) - Measurement
+- Note: There are three divisions dominated by government
+
+    (i) Public Administration, 
+    (ii) Health Care and Social Services, and 
+    (iii) Education. 
+- Since government doesn’t charge for many of these activities, government’s contribution to value-added is calculated by how much is spent on providing these services.
+
+## GDP (P) - Measurement 
+
+ - **How does ABS measure value-added?**
+- Most market-based industries are measured in the Economic Activity Survey. 
+- Government expenditure includes compensation of employees, costs of goods and services purchased, taxes less subsidies on production and consumption of fixed capital. 
+- Finance and Insurance services are measured for the entire industry indirectly (FISIM) as a function of assets and liabilities.
+
+## GDP (P) - Measurement
+- ABS publishes [annual (5204)](https://www.abs.gov.au/statistics/economy/national-accounts/australian-system-national-accounts/latest-release) and [quarterly (5206)](https://www.abs.gov.au/statistics/economy/national-accounts/australian-national-accounts-national-income-expenditure-and-product/latest-release) national accounts. 
+- Quarterly estimates are often carried forward by projecting the movements in correlated series and are subject to more revision than annual estimates. 
+- Annual estimates (apart from the most recent year) are balanced via the supply-use tables. 
+  - Main point: Once the level of GDP is finalized via balancing the statistical discrepancy item is zero. Supply-use tables start in 1994 so before this the statistical discrepancy is not zero.
+- Hence here we focus on the annual estimates found in table 5 of catalogue 5204.
+
+## GDP (P) - Measurement
+- Table 5 of ASNA contains current price and chain volume measures of value added for each 19 industries. 
+  - Technically 20 because Ownership of Dwellings is an industry, but it doesn’t employ labour since it is the provision of housing services by the owner to occupants even if the owner is an occupier.
+- Table 5 also contains the balancing item (taxes less subsidies on products). 
+- Similar to the other tables for GDP (I) and (E), there are many subtotals for the estimates below each industry division so we can’t just calculate the sum of the rows.
+
+## GDP (P) - Measurement
+```{r}
+f1 <- vabp %>% 
+  select.(-vabp) %>% 
+  pivot_longer.(cols = c(-date)) %>% 
+  ggplot(aes(x=date, y = value, group = name)) + geom_line(size = 1.5) + 
+  theme_minimal() + 
+  theme(legend.position="bottom", legend.title=element_blank(), 
+        axis.text.x = element_text(angle = 90)) +
+  scale_y_continuous(labels = comma) + 
+  labs(y = "$m", x = "", 
+       title = "Chain Volume GDP (Production) by Industry Division", 
+       caption = "Source: ABS 5204, Table 5") +
+  facet_wrap("name")
+
+ggplotly(f1) 
+
+```
+
+## GDP (P) - Measurement
+
+```{r}
+f2 <- vabp %>%  
+  select.(-vabp) %>% 
+  pivot_longer.(cols = c(-date)) %>% 
+  left_join.(vasum) %>% 
+  mutate.(prop = 100*(value/ vasum)) %>% 
+  ggplot(aes(x=date, y = prop)) + geom_line(size = 1.5) + 
+  facet_wrap("name") + 
+  theme_minimal() + 
+  theme(legend.position="bottom", legend.title=element_blank(), 
+        axis.text.x = element_text(angle = 90)) +
+  scale_y_continuous(labels = comma) + 
+  labs(y = "(%)", x = "", 
+       title = "GDP (Production) by Industry Division as a Proportion of Value-added at Basic Prices", 
+       caption = "Source: ABS 5204, Table 5")  
+ggplotly(f2) %>%  layout(legend = list(orientation = "h", y = -0.1, x = 0.1))
+```
+
+## GDP (P) - Measurement
+
+- Construction rises sharply with the Mining construction boom, but then falls. 
+Mining lifts off in the mid-2000s. 
+- Manufacturing stagnates after 2000, but the decline is clearest when charting it as a percentage of GDP. 
+- Finance and Insurance experiences a level shift after deregulation in the 80s and keeps rising. 
+- Note: Mining really rises as a proportion of GDP after 2010-ish, which shows the dividends of the construction boom as Mining is highly automated.
+
+## GDP (P) - Measurement
+
+- Grouping industries into basic categories makes it clearer:
+  - **Primary industries:**  Agriculture and Mining
+  - **Secondary industry:**  Manufacturing
+  - **Dwellings**: – yes, it’s a weird industry
+  - **Non-market:** Public Admin and Safety, Healthcare and Social Services, Education
+  - **Tertiary industries**: Electricity, Gas, Waste and Water (EGWW); Construction, Wholesale; Retail; Accommodation, Food and Cafes; Transport, Postal and Warehousing; Information Media and Telecommunications; Finance and Insurance; Rental, Hiring and Real Estate; Professional, Scientific and Technical Services (PST); Administration and Support Services; Arts and Recreation; Other Services.
+
+## GDP (P) - Measurement
+```{r}
+f3 <- sector1 %>% 
+  summarise.(vasum = sum(va), 
+             .by = c(date)) %>% 
+  left_join.(sector1) %>% 
+  mutate.(prop = 100*(va / vasum)) %>% 
+  select.(sector, date, prop) %>% 
+  ggplot(aes(x=date, y = prop, fill = sector)) + geom_col() + 
+  scale_fill_manual(values=c("#000000", "#E69F00", "#56B4E9", "#009E73", "#0072B2")) +
+  theme_minimal() +
+  theme(legend.position="bottom", legend.title=element_blank()) +
+  scale_y_continuous(labels = comma) + 
+  labs(y = "(%)", x = "", 
+       title = "Contributions to GDP (Production) by Industry Type", 
+       caption = "Source: ABS 5204, Table 5") +
+  facet_wrap("sector")
+ggplotly(f3) %>%  layout(legend = list(orientation = "h", y = -0.1, x = 0.1))
+```
+
+## Summary
+
+- Production approach is based on the value-added of industries where value-added = gross output – intermediate use
+- Industries are defined by a classification system. In Australia and New Zealand this is ANZSIC06, which has 19 industries plus Ownership of Dwellings. 
+- Table 5 of the Australian System of National Accounts publishes chain volume and current price estimates. 
+- In volume terms, the main trend of the last 45 years is the decline in Manufacturing and growth in services. 
+- However, the Mining and Construction boom starting in the early 2000s is clearly evident in its rising contribution to GDP.
+
+# Extras
+
+## GDP (P) - Selected Industries
+
+```{r}
+f4 <- vabp %>%  
+  select.(date, Arts_Rec, Transport, Info_MT) %>% 
+  rename.(`Arts and Recreation` = Arts_Rec, 
+          `Transport, Postal and Warehousing` = Transport, 
+          `Information Media and Telecommunications` = Info_MT) %>% 
+  pivot_longer.(cols = c(-date)) %>% 
+  left_join.(vasum) %>% 
+  mutate.(prop = 100*(value/ vasum)) %>% 
+  ggplot(aes(x=date, y = prop)) + geom_line(size = 1.5) + 
+  theme_minimal() + 
+  theme(legend.position="bottom", legend.title=element_blank()) +
+  scale_y_continuous(labels = comma) + 
+  labs(y = "(%)", x = "", 
+       title = "", 
+       caption = "Source: ABS 5204, Table 5") + 
+  facet_wrap("name")
+ggplotly(f4) %>%  layout(legend = list(orientation = "h", y = -0.1, x = 0.1))
+```
+
+## Current Price and Chain Volumes
+
+```{r}
+ming %>% 
+  ggplot(aes(x=date, y = value, group = name, colour = name)) + 
+  geom_line(size = 1.5) + 
+  theme_minimal() +
+  theme(legend.position="bottom", legend.title=element_blank()) +
+  scale_y_continuous(labels = comma) + 
+  scale_color_manual(values=c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2")) + 
+  labs(y = "$m", x = "", 
+       title = "Mining Current Price and Chain Volume GDP(P)", 
+       caption = "Source: ABS 5204, Table 5") + 
+  annotate("text", x = as.Date("2000-06-01"), y = 150000, size = 4, fontface = "bold",
+           label = "Impact of Rising Mineral Prices") +
+  annotate("segment", x = as.Date("2006-06-01"), xend = as.Date("2006-06-01"), y = 170000, yend = 125000,
+           colour = "#000000", size = 1.5, arrow = arrow())
+
+
+```
+
+## Current Price and Chain Volumes
+
+```{r}
+arts %>% 
+  ggplot(aes(x=date, y = value, group = name, colour = name)) + 
+  geom_line(size = 1.5) + 
+  theme_minimal() +
+  theme(legend.position="bottom", legend.title=element_blank()) +
+  scale_y_continuous(labels = comma) + 
+  scale_color_manual(values=c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2")) + 
+  labs(y = "$m", x = "", 
+       title = "Arts and Recreation in Current Price and Chain Volume GDP(P)", 
+       caption = "Source: ABS 5204, Table 5") + 
+  annotate("text", x = as.Date("2005-06-01"), y = 15000, size = 4, fontface = "bold",
+           label = "Current prices equal chain volume in second last year by definition") +
+  annotate("segment", x = as.Date("2019-06-01"), xend = as.Date("2019-06-01"), y = 12000, yend = 15000,
+           colour = "#000000", size = 1.5, arrow = arrow())
+
+```
+
+---
+```{r}
+
+gdp_p <- fread("C:/Rprojects/gdp_p/gdp_cv_table.csv") %>% 
+  filter.(`Series ID` != "A2420955W", `Series ID` != "A2420956X", `Series ID` != "A2420957A", `Series ID` != "A2420912W")
+gdp_p %>% 
+  kbl(align = 'lr') %>% 
+  #kable_paper(full_width = F) %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"), font_size = 10)
+```
+

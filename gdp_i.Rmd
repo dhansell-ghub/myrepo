@@ -1,0 +1,244 @@
+---
+title: "Introduction to the Australian System of National Accounts"
+subtitle: "Module 2: Gross Domestic Product (Income)"
+author: "David Hansell"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(data.table)
+library(tidytable)
+library(kableExtra)
+library(readabs)
+library(tidytable)
+library(ggplot2)
+library(tidyverse)
+library(scales, lubridate)
+library(plotly)
+
+coe <- read_abs(series_id = "A2421040T") %>% 
+  select.(value, date) %>% 
+  rename.(coe = value)
+
+gos <- read_abs(series_id = "A2421313L") %>% 
+  select.(value, date) %>% 
+  rename.(gos = value)
+
+gmi <- read_abs(series_id = "A2421314R") %>% 
+  select.(value, date) %>% 
+  rename.(gmi = value)
+
+tls <- read_abs(series_id = "A2421316V") %>% 
+  select.(value, date) %>% 
+  rename.(tls = value)
+
+sd <- read_abs(series_id = "A2421018W") %>% 
+  select.(value, date) %>% 
+  rename.(sd = value)
+
+ipart <- coe %>% 
+  full_join.(gos) %>% 
+  full_join.(gmi) %>% 
+  full_join.(tls) %>% 
+  rename.(`Compensation of Employees` = coe, 
+          `Gross Operating Surplus` = gos, 
+          `Gross Mixed Income` = gmi, 
+          `Taxes Less Subsidies` = tls)
+```
+
+## Aims of the module
+
+1. Understand the income approach of GDP 
+2. How to map these concepts to ABS national accounts time series
+
+
+Note: there is a corresponding module that demonstrates how to download ABS data directly in R-Studio and make the charts presented here.
+
+## Overview
+
+- GDP = Gross Domestic Product
+  + **Gross** = includes depreciation of capital
+  + **Domestic** = confined to a production boundary
+  + **Product** = what is produced
+- System of National Accounts (SNA) defines GDP three ways
+  + **Expenditure**: Consumption + Investment + Govt Purchases + Exports – Imports 
+  + **Income**: Compensation of Employees (CoE) + Gross Operating Surplus (GOS)
+  + **Production**: Output less intermediate Expenses (value-added). 
+- In other words, we spend our income on what we produce.
+
+## Overview
+
+This module focusses on the income approach or GDP(I). 
+
+We divide the module into two parts:  
+
+1. Concepts  
+2. Measurement.
+  
+# Concepts
+
+## GDP (I) - Concepts
+
+Income approach to GDP is based on the framework: 
+$$
+\small
+\begin{aligned}
+GDP = \text{Compensation of Employees (CoE)}   \\
++ \text{ Gross Operating Surplus (GOS)} \\
++ \text{ Gross Mixed Income (GMI)} \\
++ \text{ Taxes} \\
+- \text{ Subsidies (on Production and Imports)} 
+\end{aligned}
+$$
+
+$$
+\small
+\left.
+\begin{array}{l}
+\text{CoE is returns to labour}\\
+\text{GOS is returns to capital}\\
+\text{GMI is combined labour and capital}
+\end{array}
+\right\}
+=\text{ Income to Factors}
+$$
+
+## GDP (I) - Concepts 
+
+- **Compensation of Employees** – includes wages and salaries paid to employees and employer social contributions.
+  - Employer’s social contributions are paid by employers to employees (typically) in advance of the benefit being paid. These include payments for sickness, accidents, redundancy, retirement and superannuation. 
+- **Gross Operating Surplus** is the surplus paid to owners of incorporated businesses. It includes profits, depreciation and obsolecence of capital. It’s often measured as a residual: ie, once we know CoE and the level of GDP, we can back-out GoS. 
+
+## GDP (I) - Concepts 
+
+- **Gross Mixed Income** is best thought of as CoE and GOS for unincorporated (and small) businesses. 
+  - For example, if a business owner doesn’t pay a wage to his/herself but receives “profits” from the business, this is a combination of the return to capital and labour, but the returns to factors of production (capital and labour) are combined.
+- **Total Factor Income** is the sum of Compensation of Employees, Gross Operating Surplus and Gross Mixed Income. 
+
+
+## GDP (I) - Concepts 
+
+- **Taxes less subsidies** on production and imports – this item is necessary to convert GDP at basic prices – ie returns to the factors of production – into GDP at market prices. 
+  - Why? Because GDP(E) is measured in market prices, which include taxes and subsidies on the products consumed or transformed into capital.
+  
+# Measurement
+
+## Measurement - Overview
+
+- ABS publishes [annual (5204)](https://www.abs.gov.au/statistics/economy/national-accounts/australian-system-national-accounts/latest-release) and [quarterly (5206)](https://www.abs.gov.au/statistics/economy/national-accounts/australian-national-accounts-national-income-expenditure-and-product/latest-release) national accounts. 
+- Quarterly estimates are often carried forward by projecting the movements in correlated series and are subject to more revision than annual estimates 
+- Annual estimates (apart from the most recent year) are balanced via the supply-use tables. 
+  - Main point: Once the level of GDP is finalized the statistical discrepancy item is zero. Supply-use tables start in 1994 so before this the statistical discrepancy is not zero.
+- Hence here we focus on the annual estimates found in table 6 of catalogue 5204.
+
+## Measurement - Overview
+
+- Table 6 contains current price estimates of income. 
+  - Why current prices and not a volume measure? 
+    - No natural price index for GOS. 
+    - Wages can be deflated separately via Wage Price Index or GDP deflator.
+    - Hours worked are also measured and that is a pure volume measure.
+- Compared to expenditure approach, there are not as many series in table 6. 
+
+## Measurement - Compensation of Employees
+
+- The two series that make up Compensation of Employees are
+  - **Wages and Salaries**: Series ID = A2421038F
+  - **Employer Social Contributions**: Series ID = A2421039J
+- However these two series only start from the 1989-90 fiscal year. 
+- Hence we use **Compensation of Employees** so we can look at longer term trends: 
+  - Series ID = A2421040T
+
+## Measurement - Gross Operating Surplus
+
+- **Gross operating surplus** (series ID = A2421313L ) consists of 5 main series
+  - Private non-financial corporations (A2421041V)
+  - Public non-financial corporations (A2421042W)
+  - Financial corporations (A2421309W)
+  - General government (A2421311J)
+  - Dwellings owned by persons (A2421312K)
+- The most confusing of these is dwellings.
+  - Main idea: Dwellings are capital and provide services (ie, shelter).
+  
+## Measurement - GMI and Taxes/Subsidies
+
+- **Gross Mixed Income** (series ID = A2421314R) is for unincorporated enterprises where it’s difficult to separate a return to capital and return to labour. 
+  - Example: A family operates a business as a trust that pays no official wages, but provides dividends to the members of the trust.
+- As discussed above, **taxes less subsidies on production and imports** (series ID = A2421316V) is needed to convert GDP at basic prices to market prices. 
+
+## Measurement - Components of GDP(I)
+```{r}
+f1 <- ipart %>%   pivot_longer.(cols = c(-date)) %>% 
+  # filter.(date >= "2000-06-01") %>% 
+  ggplot(aes(x=date, y = value)) + geom_line(size = 1.5) + 
+  theme_minimal() +
+  theme(legend.position="bottom", legend.title=element_blank()) +
+  scale_y_continuous(labels = comma) + 
+  scale_color_manual(values=c("#000000")) + 
+  labs(y = "$m", x = "", 
+       title = "Main Components of GDP (Income)", 
+       caption = "Source: ABS 5204, Table 6") + 
+  facet_wrap("name")
+ggplotly(f1) %>%  layout(legend = list(orientation = "h", y = -0.1, x = 0))
+
+```
+
+## Measurement - Components of GDP(I)
+
+```{r}
+f2 <- ipart %>% 
+  mutate.(tfi = `Compensation of Employees` + `Gross Operating Surplus` + `Gross Mixed Income`, 
+          coe = 100*(`Compensation of Employees` / tfi), 
+          gos = 100*(`Gross Operating Surplus` / tfi), 
+          gmi = 100*(`Gross Mixed Income` / tfi)) %>% 
+  select.(-`Compensation of Employees`, -`Gross Operating Surplus`, -`Gross Mixed Income`, -tfi, -`Taxes Less Subsidies`) %>% 
+  rename.(`Compensation of Employees` = coe, 
+          `Gross Operating Surplus` = gos, 
+          `Gross Mixed Income` = gmi) %>% 
+  pivot_longer.(cols = c(-date)) %>% 
+  ggplot(aes(x=date, y = value, group = name, colour = name)) + geom_line(size = 1) +
+  theme_minimal() +
+  theme(legend.position="bottom", legend.title=element_blank()) +
+  scale_colour_manual(values=c("#000000", "#E69F00", "#56B4E9")) +
+  labs(y = "(%)", x = "", 
+       title = "Main Components of GDP (Income) as a Percentage of Total Factor Income", 
+       caption = "Source: ABS 5204, Table 6") 
+ggplotly(f2) %>%  layout(legend = list(orientation = "h", y = -0.1, x = 0.1))
+```
+
+
+## Summary 
+
+- The income approach to GDP shows the returns to the factors of production: labour and capital.
+  - Note: taxes less subsidies on production and imports is needed to ensure consistency of GDP(I) and the other measures of GDP
+- The largest share of GDP(I) is compensation of employees.
+- The share of gross operating surplus has risen over time, largely due to the fall in gross mixed income. 
+  - This doesn’t necessarily reflect a rise in corporate profit, but a change in business structures away from unincorporated business to incorporated entities.
+
+# Extras
+
+## Extras
+
+```{r}
+f3 <- ipart %>% 
+  mutate.(tfi = `Compensation of Employees` + `Gross Operating Surplus` + `Gross Mixed Income`, 
+          coe = 100*(`Compensation of Employees` / tfi), 
+          gos = 100*(`Gross Operating Surplus` / tfi), 
+          gmi = 100*(`Gross Mixed Income` / tfi)) %>% 
+select.(-`Compensation of Employees`, -`Gross Operating Surplus`, -`Gross Mixed Income`, -tfi, -`Taxes Less Subsidies`) %>% 
+  rename.(`Compensation of Employees` = coe, 
+          `Gross Operating Surplus` = gos, 
+          `Gross Mixed Income` = gmi) %>% 
+  pivot_longer.(cols = c(-date)) %>% 
+  ggplot(aes(x=date, y = value, fill = name)) + geom_col(position = position_stack(reverse = TRUE)) +
+  scale_fill_manual(values=c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2")) +
+  theme_minimal() +
+  theme(legend.position="bottom", legend.title=element_blank()) +
+  scale_y_continuous(labels = comma) + 
+  labs(y = "(%)", x = "", 
+       title = "Main Components of GDP (Income) as a Percentage of Total Factor Income", 
+       caption = "Source: ABS 5204, Table 6") 
+ggplotly(f3) %>%  layout(legend = list(orientation = "h", y = -0.1, x = 0.1))
+```
+
