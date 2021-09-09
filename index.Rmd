@@ -1,7 +1,0 @@
----
-title: "Welcome"
----
-
-This website hosts some training modules. I set it up because the firewall won't let me share html files. 
-
-Enjoy!
